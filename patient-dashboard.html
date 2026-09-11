@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Services Portal — Patient dashboard</title>
+  <link rel="stylesheet" href="patient-dashboard.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="register.html" aria-label="Health Services Portal home"><span class="brand-mark">✚</span><span>Health Services Portal<small>Accessible healthcare for every citizen</small></span></a>
+    <span class="verified"><span>✓</span> Identity verified</span>
+  </header>
+
+  <main class="page">
+    <section class="welcome">
+      <div>
+        <p class="eyebrow">Patient dashboard</p>
+        <h1>Your health documents, in one place.</h1>
+        <p class="intro">Review records already linked to your MediKiosk ID or add a new document whenever you need to.</p>
+      </div>
+      <button class="button" id="upload-button">Upload document</button>
+      <input id="file-input" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" multiple hidden>
+    </section>
+
+    <section class="summary" aria-label="Account summary">
+      <article><span>MediKiosk ID</span><strong id="patient-id">—</strong></article>
+      <article><span>Documents</span><strong id="document-count">0</strong></article>
+      <article><span>Account status</span><strong class="status">Verified</strong></article>
+    </section>
+
+    <section class="workspace">
+      <div class="records-card">
+        <div class="section-title"><div><h2>Uploaded documents</h2><p>Files linked to this health profile</p></div></div>
+        <div id="document-list" class="document-list"></div>
+      </div>
+      <aside class="review-card" aria-live="polite">
+        <p class="eyebrow">Document review</p>
+        <div id="document-preview"></div>
+      </aside>
+    </section>
+  </main>
+
+  <template id="empty-state"><div class="empty"><strong>No documents yet</strong><p>Upload a medical record, prescription, lab report, or identity document to see it here.</p></div></template>
+  <script src="patient-dashboard.js"></script>
+</body>
+</html>

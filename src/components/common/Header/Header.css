@@ -1,0 +1,77 @@
+.gov-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 24px;
+  background: var(--navy);
+  color: #d7e0ea;
+  font-size: 12px;
+}
+.gov-strip nav { display: flex; gap: 16px; }
+.gov-strip button,
+.gov-strip a {
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 600;
+}
+.tricolor {
+  display: grid;
+  grid-template-rows: 4px 3px 4px;
+}
+.tricolor i:nth-child(1) { background: var(--saffron); }
+.tricolor i:nth-child(2) { background: #fff; }
+.tricolor i:nth-child(3) { background: var(--india-green); }
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+.brand b {
+  display: block;
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--navy);
+}
+.brand small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.main-nav {
+  display: flex;
+  gap: 22px;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 600;
+}
+.main-nav a:hover { color: var(--gov-green); }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.text-link {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+}

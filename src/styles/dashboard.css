@@ -1,0 +1,81 @@
+.dashboard-shell {
+  min-height: 100vh;
+  display: flex;
+  background: #f4f7fb;
+}
+.dashboard-main { width: calc(100% - 250px); }
+.dashboard-content {
+  width: min(100% - 64px, 1040px);
+  margin: 0 auto;
+  padding: 36px 0 70px;
+}
+.overview-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+.overview-intro h1 {
+  margin: 0;
+  font-size: 30px;
+  color: var(--navy);
+}
+.overview-intro p { max-width: 640px; margin: 10px 0 0; color: var(--muted); }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 28px 0;
+}
+.stats article,
+.records-panel,
+.activity-panel,
+.upload-panel,
+.history-panel,
+.chat-panel {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.stats article { padding: 18px; }
+.stats span { display: block; color: var(--muted); font-size: 12px; }
+.stats b { display: block; margin-top: 8px; font-size: 22px; color: var(--navy); }
+.stats small { color: #6d7f90; font-size: 11px; }
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.panel-heading h2 { margin: 0; font-size: 18px; color: var(--navy); }
+.panel-heading p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.panel-heading a { color: var(--blue); font-weight: 700; font-size: 13px; }
+.records-panel, .activity-panel { padding: 20px; }
+.record-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 0;
+  border-top: 1px solid #edf1f5;
+}
+.file-badge {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: var(--blue-soft);
+  color: var(--navy);
+  border-radius: 10px;
+}
+.record-info h3 { margin: 0; font-size: 14px; }
+.record-info p, .record-info span { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.empty { padding: 28px; text-align: center; color: var(--muted); }
+.activity { display: flex; gap: 10px; padding: 12px 0; border-top: 1px solid #edf1f5; color: var(--blue); }
+.activity p { margin: 0; color: #4c6272; font-size: 13px; }
+.activity span { display: block; margin-top: 4px; color: #8a9aaa; font-size: 11px; }
+@media (max-width: 800px) {
+  .dashboard-main { width: 100%; padding-bottom: 64px; }
+  .dashboard-content { width: min(100% - 28px, 700px); padding-top: 24px; }
+  .overview-intro { flex-direction: column; align-items: flex-start; }
+  .stats { grid-template-columns: 1fr; }
+}

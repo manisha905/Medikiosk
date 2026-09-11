@@ -1,0 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --navy: #0d2345;
+  --navy-mid: #173a66;
+  --navy-soft: #edf3fb;
+  --blue: #1f5db5;
+  --blue-soft: #ebf3ff;
+  --ink: #182635;
+  --muted: #586a7d;
+  --line: #dfe7f0;
+  --paper: #f7f9fc;
+  --white: #ffffff;
+  --danger: #b63f3f;
+  --success: #1a7a5a;
+  --shadow: 0 18px 38px rgba(13, 35, 69, 0.08);
+  --radius: 12px;
+  --font: 'Inter', 'Segoe UI', sans-serif;
+  --serif: 'Inter', 'Segoe UI', sans-serif;
+}

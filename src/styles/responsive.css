@@ -1,0 +1,15 @@
+@media (max-width: 900px) {
+  .site-header .main-nav,
+  .header-actions .text-link {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .hero,
+  .services-grid,
+  .how-grid,
+  .stats {
+    grid-template-columns: 1fr !important;
+  }
+}

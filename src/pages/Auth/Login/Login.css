@@ -1,0 +1,2 @@
+/* Login shares the government auth styles from Register.css */
+@import '../Register/Register.css';

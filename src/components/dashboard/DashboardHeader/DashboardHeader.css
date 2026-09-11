@@ -1,0 +1,44 @@
+.dashboard-header {
+  height: 78px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+.dashboard-header p { margin: 0; color: var(--muted); font-size: 12px; }
+.dashboard-header h2 { margin: 4px 0 0; font-size: 18px; color: var(--navy); }
+.user-tools { display: flex; align-items: center; gap: 10px; }
+.verified-chip {
+  padding: 6px 10px;
+  background: var(--tint);
+  color: var(--gov-green);
+  font-size: 12px;
+  font-weight: 700;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #d7eee3;
+  color: var(--gov-green-dark);
+  font-weight: 700;
+}
+.logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--navy);
+}
+@media (max-width: 800px) {
+  .dashboard-header { padding: 0 16px; }
+  .verified-chip { display: none; }
+}
