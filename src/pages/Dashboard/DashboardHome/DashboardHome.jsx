@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom';
-import { FileText, ShieldCheck, Upload } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { FileText, ShieldCheck, Upload, Mic, Square } from 'lucide-react';
 import Button from '../../../components/common/Button/Button';
 import { useAuth } from '../../../context/AuthContext';
 import { healthRecordService } from '../../../services/healthRecordService';
@@ -7,8 +8,59 @@ import './DashboardHome.css';
 
 export default function DashboardHome() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const records = healthRecordService.getRecords();
   const history = healthRecordService.getHistory();
+
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [speechSupported, setSpeechSupported] = useState(true);
+  const recognitionRef = useRef(null);
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setSpeechSupported(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-IN'; // swap per selected kiosk language
+
+    recognition.onresult = (event) => {
+      let combined = '';
+      for (let i = 0; i < event.results.length; i += 1) {
+        combined += event.results[i][0].transcript;
+      }
+      setTranscript(combined);
+    };
+
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+
+    return () => recognition.stop();
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) return;
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      setTranscript('');
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+
+  const useTranscript = () => {
+    if (recognitionRef.current) recognitionRef.current.stop();
+    navigate('/dashboard/upload', { state: { transcript } });
+  };
 
   return (
     <>
@@ -23,6 +75,7 @@ export default function DashboardHome() {
         </div>
         <Link to="/dashboard/upload"><Button>Upload document</Button></Link>
       </section>
+
       <section className="stats">
         <article>
           <span>Health Services ID</span>
@@ -40,6 +93,43 @@ export default function DashboardHome() {
           <small>Mobile {user?.mobile}</small>
         </article>
       </section>
+
+      <section className="voice-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Tell us what's bothering you</h2>
+            <p>Speak instead of typing — we'll transcribe it for your visit.</p>
+          </div>
+        </div>
+
+        {!speechSupported ? (
+          <div className="empty">Voice input isn't supported in this browser. Try Chrome or Edge.</div>
+        ) : (
+          <div className="voice-recorder">
+            <button
+              type="button"
+              className={`mic-button ${isListening ? 'is-listening' : ''}`}
+              onClick={toggleListening}
+              aria-label={isListening ? 'Stop recording' : 'Start recording'}
+            >
+              {isListening ? <Square size={20} /> : <Mic size={22} />}
+            </button>
+            <div className="voice-transcript">
+              {transcript ? (
+                <p>{transcript}</p>
+              ) : (
+                <p className="placeholder">
+                  {isListening ? 'Listening…' : 'Tap the mic and start speaking.'}
+                </p>
+              )}
+            </div>
+            {transcript && !isListening && (
+              <Button onClick={useTranscript}>Use this</Button>
+            )}
+          </div>
+        )}
+      </section>
+
       <section className="records-panel">
         <div className="panel-heading">
           <div>
@@ -62,6 +152,7 @@ export default function DashboardHome() {
           ))
         )}
       </section>
+
       <section className="activity-panel">
         <div className="panel-heading">
           <div>

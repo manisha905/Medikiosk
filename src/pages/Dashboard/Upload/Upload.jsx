@@ -4,6 +4,7 @@ import Button from '../../../components/common/Button/Button';
 import { DOCUMENT_TYPES } from '../../../utils/constants';
 import { formatDateTime, formatFileSize } from '../../../utils/helpers';
 import { healthRecordService } from '../../../services/healthRecordService';
+import { ocrService } from '../../../services/ocrService';
 import './Upload.css';
 
 export default function Upload() {
@@ -12,6 +13,8 @@ export default function Upload() {
   const [name, setName] = useState('');
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
+  const [extracting, setExtracting] = useState(false);
+  const [extractedText, setExtractedText] = useState('');
 
   const select = (event) => {
     const next = event.target.files?.[0];
@@ -25,15 +28,36 @@ export default function Upload() {
     setFile(next);
   };
 
-  const save = () => {
-    healthRecordService.addRecord({
-      id: `${Date.now()}`,
-      name: name || file.name,
-      type,
-      date: formatDateTime(),
-      size: formatFileSize(file.size),
-    });
-    setDone(true);
+  const save = async () => {
+    setError('');
+    setExtracting(true);
+    try {
+      const ocrResult = await ocrService.extractText(file);
+      setExtractedText(ocrResult.text);
+
+      healthRecordService.addRecord({
+        id: `${Date.now()}`,
+        name: name || file.name,
+        type,
+        date: formatDateTime(),
+        size: formatFileSize(file.size),
+        extractedText: ocrResult.text,
+        redFlags: ocrResult.red_flags,
+      });
+      setDone(true);
+    } catch (err) {
+      setError(err.message || 'Could not read this document. Please try again.');
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const reset = () => {
+    setFile(null);
+    setName('');
+    setDone(false);
+    setExtractedText('');
+    setError('');
   };
 
   return (
@@ -51,7 +75,13 @@ export default function Upload() {
             <CheckCircle2 color="#0f6b4c" size={42} />
             <h2>Record stored securely</h2>
             <p>{name || file?.name} is now listed under View details.</p>
-            <Button onClick={() => { setFile(null); setName(''); setDone(false); }}>Upload another</Button>
+            {extractedText && (
+              <div className="ocr-preview">
+                <b>Extracted text</b>
+                <pre>{extractedText}</pre>
+              </div>
+            )}
+            <Button onClick={reset}>Upload another</Button>
           </div>
         ) : (
           <>
@@ -85,7 +115,9 @@ export default function Upload() {
                 Display name (optional)
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Annual health checkup" />
               </label>
-              <Button disabled={!file} onClick={save}>Upload securely</Button>
+              <Button disabled={!file || extracting} onClick={save}>
+                {extracting ? 'Reading document…' : 'Upload securely'}
+              </Button>
             </div>
             <p className="error-text">{error}</p>
           </>

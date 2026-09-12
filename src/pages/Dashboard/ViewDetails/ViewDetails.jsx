@@ -1,9 +1,13 @@
-import { FileText } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { healthRecordService } from '../../../services/healthRecordService';
 import './ViewDetails.css';
 
 export default function ViewDetails() {
   const records = healthRecordService.getRecords();
+  const [expandedId, setExpandedId] = useState(null);
+
+  const toggle = (id) => setExpandedId((current) => (current === id ? null : id));
 
   return (
     <>
@@ -24,17 +28,46 @@ export default function ViewDetails() {
         {records.length === 0 ? (
           <div className="empty">No records found. Use Upload to add a prescription, lab report or other document.</div>
         ) : (
-          records.map((record) => (
-            <article className="record-item" key={record.id}>
-              <div className="file-badge"><FileText size={18} /></div>
-              <div className="record-info">
-                <h3>{record.name}</h3>
-                <p>{record.type} · {record.date}</p>
-                <span>{record.size}</span>
-              </div>
-              <div className="record-actions">On file</div>
-            </article>
-          ))
+          records.map((record) => {
+            const isOpen = expandedId === record.id;
+            const hasText = Boolean(record.extractedText);
+            const hasFlags = Boolean(record.redFlags?.length);
+            return (
+              <article className="record-item" key={record.id} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                  <div className="file-badge"><FileText size={18} /></div>
+                  <div className="record-info">
+                    <h3>{record.name}</h3>
+                    <p>{record.type} · {record.date}</p>
+                    <span>{record.size}</span>
+                  </div>
+                  {hasFlags && (
+                    <span className="record-flag" title={record.redFlags.join(', ')}>
+                      <AlertTriangle size={14} /> Flagged
+                    </span>
+                  )}
+                  {hasText ? (
+                    <button type="button" className="record-toggle" onClick={() => toggle(record.id)}>
+                      {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      {isOpen ? 'Hide text' : 'View extracted text'}
+                    </button>
+                  ) : (
+                    <div className="record-actions">On file</div>
+                  )}
+                </div>
+                {isOpen && hasText && (
+                  <div className="record-extracted-text">
+                    {hasFlags && (
+                      <p className="record-flag-detail">
+                        <AlertTriangle size={14} /> Possible flag: {record.redFlags.join(', ')}
+                      </p>
+                    )}
+                    <pre>{record.extractedText}</pre>
+                  </div>
+                )}
+              </article>
+            );
+          })
         )}
       </section>
     </>
