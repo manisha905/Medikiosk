@@ -44,11 +44,15 @@ const multer = require('multer');
 const axios = require('axios');
 const FormData = require('form-data');
 const cors = require('cors');
-const voiceRouter = require('./routes/voice');
 const app = express();
 
 app.use(cors());
-app.use('/api/voice', voiceRouter);
+
+
+// remove: const voiceRouter = require('./routes/voice');
+// remove: app.use('/api/voice', voiceRouter);
+const intakeRouter = require('./routes/intake');
+app.use('/api/intake', intakeRouter);
 
 const upload = multer({
   storage: multer.memoryStorage(),

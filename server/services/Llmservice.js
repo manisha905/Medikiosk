@@ -1,21 +1,19 @@
 const OpenAI = require('openai');
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 
-if (!OPENAI_API_KEY) {
-  // Don't throw at require-time so the rest of the app can still boot;
-  // the actual call will fail loudly with a clear message instead.
-  console.warn('[llmService] OPENAI_API_KEY is not set yet.');
+if (!GROQ_API_KEY) {
+  console.warn('[llmService] GROQ_API_KEY is not set yet.');
 }
 
-const client = new OpenAI({ apiKey: OPENAI_API_KEY });
+const client = new OpenAI({
+  apiKey: GROQ_API_KEY,
+  baseURL: 'https://api.groq.com/openai/v1',
+});
 
 class LlmError extends Error {}
 
-// This is the whole "brain" of the intake bot. It is intentionally
-// conservative: it only gathers information for the doctor, it never
-// diagnoses, and it has a hard escape hatch for red-flag symptoms.
 const SYSTEM_PROMPT = `You are a pre-consultation intake assistant inside a healthcare app.
 A patient is speaking to you (their words arrive to you as transcribed text, possibly in an
 Indian regional language). Your job is to have a short, structured conversation to prepare
@@ -50,7 +48,6 @@ You must respond ONLY with strict JSON, no markdown, no commentary, matching one
 }}`;
 
 function safeParseJson(text) {
-  // Models sometimes wrap JSON in ```json fences even when told not to.
   const cleaned = text.replace(/```json|```/g, '').trim();
   try {
     return JSON.parse(cleaned);
@@ -59,17 +56,9 @@ function safeParseJson(text) {
   }
 }
 
-/**
- * Advance the intake conversation by one turn.
- * @param {Array<{role: 'user'|'assistant', content: string}>} history - prior turns
- *        (assistant turns should be the plain question text you spoke to the patient,
- *        not the raw JSON).
- * @param {string} userMessage - latest transcribed patient text (from Bhashini ASR).
- * @returns {Promise<{action: 'ask'|'escalate'|'summarize', question?: string, message?: string, summary?: object}>}
- */
 async function getNextStep(history, userMessage) {
-  if (!OPENAI_API_KEY) {
-    throw new LlmError('Set OPENAI_API_KEY env var first.');
+  if (!GROQ_API_KEY) {
+    throw new LlmError('Set GROQ_API_KEY env var first.');
   }
 
   const messages = [
@@ -81,17 +70,17 @@ async function getNextStep(history, userMessage) {
   let resp;
   try {
     resp = await client.chat.completions.create({
-      model: OPENAI_MODEL,
+      model: GROQ_MODEL,
       messages,
       temperature: 0.3,
       response_format: { type: 'json_object' },
     });
   } catch (err) {
-    throw new LlmError(`OpenAI call failed: ${err.message}`);
+    throw new LlmError(`Groq call failed: ${err.message}`);
   }
 
   const raw = resp.choices?.[0]?.message?.content;
-  if (!raw) throw new LlmError('Empty response from OpenAI.');
+  if (!raw) throw new LlmError('Empty response from Groq.');
 
   const parsed = safeParseJson(raw);
   if (!parsed.action) throw new LlmError(`LLM response missing "action": ${raw}`);

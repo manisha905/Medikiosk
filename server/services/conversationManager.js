@@ -1,5 +1,5 @@
-const { getNextStep, LlmError } = require('./llmService');
-const { synthesize, BhashiniError } = require('./ttsService');
+const { getNextStep, LlmError } = require('./Llmservice');
+const { synthesize, BhashiniError } = require('./Ttsservice');
 
 /**
  * One intake session for one patient conversation.
@@ -78,4 +78,4 @@ class IntakeSession {
   }
 }
 
-export default { IntakeSession };
+module.exports = { IntakeSession };

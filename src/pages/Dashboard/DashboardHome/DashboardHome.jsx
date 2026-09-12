@@ -1,66 +1,136 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useEffect, useRef, useState } from 'react';
-import { FileText, ShieldCheck, Upload, Mic, Square } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useRef, useState } from 'react';
+import { FileText, ShieldCheck, Upload, Mic, Square, AlertTriangle } from 'lucide-react';
 import Button from '../../../components/common/Button/Button';
 import { useAuth } from '../../../context/AuthContext';
 import { healthRecordService } from '../../../services/healthRecordService';
+import { intakeService, playBase64Audio } from '../../../services/Intakeservice';
+import { formatDateTime } from '../../../utils/helpers';
 import './DashboardHome.css';
+
+// Swap for a language picker later if the kiosk needs to support more than one.
+const LANGUAGE = 'hi';
+const VOICE_GENDER = 'female';
 
 export default function DashboardHome() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const records = healthRecordService.getRecords();
   const history = healthRecordService.getHistory();
 
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [speechSupported, setSpeechSupported] = useState(true);
-  const recognitionRef = useRef(null);
+  const [micSupported, setMicSupported] = useState(
+    typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && !!window.MediaRecorder
+  );
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [voiceError, setVoiceError] = useState('');
 
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setSpeechSupported(false);
+  const [sessionId, setSessionId] = useState(null);
+  const [log, setLog] = useState([]); // [{role: 'user'|'assistant', content, urgent?}]
+  const [interviewStatus, setInterviewStatus] = useState('idle'); // idle | in_progress | escalated | summarized
+  const [summary, setSummary] = useState(null);
+  const [saved, setSaved] = useState(false);
+
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+  const streamRef = useRef(null);
+
+  const startRecording = async () => {
+    setVoiceError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      chunksRef.current = [];
+
+      const recorder = new MediaRecorder(stream);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = handleRecordingStop;
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      setMicSupported(false);
+      setVoiceError("Could not access the microphone. Check your browser's site permissions and try again.");
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    setIsRecording(false);
+  };
+
+  const handleRecordingStop = async () => {
+    const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+    chunksRef.current = [];
+
+    if (blob.size === 0) {
+      setVoiceError('No audio captured — try again.');
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-IN'; // swap per selected kiosk language
+    setIsProcessing(true);
+    try {
+      const result = await intakeService.sendTurn(blob, {
+        sessionId,
+        language: LANGUAGE,
+        voiceGender: VOICE_GENDER,
+      });
 
-    recognition.onresult = (event) => {
-      let combined = '';
-      for (let i = 0; i < event.results.length; i += 1) {
-        combined += event.results[i][0].transcript;
+      setSessionId(result.sessionId);
+      setLog((prev) => [...prev, { role: 'user', content: result.transcript }]);
+
+      if (result.status === 'ask') {
+        setInterviewStatus('in_progress');
+        setLog((prev) => [...prev, { role: 'assistant', content: result.question }]);
+        playBase64Audio(result.audioBase64);
+      } else if (result.status === 'escalate') {
+        setInterviewStatus('escalated');
+        setLog((prev) => [...prev, { role: 'assistant', content: result.message, urgent: true }]);
+        playBase64Audio(result.audioBase64);
+      } else if (result.status === 'summarize') {
+        setInterviewStatus('summarized');
+        setSummary(result.summary);
       }
-      setTranscript(combined);
-    };
-
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
-
-    recognitionRef.current = recognition;
-
-    return () => recognition.stop();
-  }, []);
-
-  const toggleListening = () => {
-    if (!recognitionRef.current) return;
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      setTranscript('');
-      recognitionRef.current.start();
-      setIsListening(true);
+    } catch (err) {
+      setVoiceError(err.message || 'Could not process that. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const useTranscript = () => {
-    if (recognitionRef.current) recognitionRef.current.stop();
-    navigate('/dashboard/upload', { state: { transcript } });
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
   };
+
+  const startNewInterview = () => {
+    setSessionId(null);
+    setLog([]);
+    setInterviewStatus('idle');
+    setSummary(null);
+    setSaved(false);
+    setVoiceError('');
+  };
+
+  const saveSummary = () => {
+    healthRecordService.addRecord({
+      id: `${Date.now()}`,
+      name: 'AI intake summary',
+      type: 'Intake summary',
+      date: formatDateTime(),
+      size: '—',
+      intakeSummary: summary,
+    });
+    setSaved(true);
+  };
+
+  const interviewEnded = interviewStatus === 'escalated' || interviewStatus === 'summarized';
 
   return (
     <>
@@ -98,33 +168,81 @@ export default function DashboardHome() {
         <div className="panel-heading">
           <div>
             <h2>Tell us what's bothering you</h2>
-            <p>Speak instead of typing — we'll transcribe it for your visit.</p>
+            <p>Speak your answers — we'll ask a few short follow-up questions before your visit.</p>
           </div>
         </div>
 
-        {!speechSupported ? (
-          <div className="empty">Voice input isn't supported in this browser. Try Chrome or Edge.</div>
+        {!micSupported ? (
+          <div className="empty">Microphone access isn't available. Check your browser's site permissions and try again.</div>
         ) : (
           <div className="voice-recorder">
-            <button
-              type="button"
-              className={`mic-button ${isListening ? 'is-listening' : ''}`}
-              onClick={toggleListening}
-              aria-label={isListening ? 'Stop recording' : 'Start recording'}
-            >
-              {isListening ? <Square size={20} /> : <Mic size={22} />}
-            </button>
-            <div className="voice-transcript">
-              {transcript ? (
-                <p>{transcript}</p>
-              ) : (
-                <p className="placeholder">
-                  {isListening ? 'Listening…' : 'Tap the mic and start speaking.'}
-                </p>
-              )}
-            </div>
-            {transcript && !isListening && (
-              <Button onClick={useTranscript}>Use this</Button>
+            {log.length > 0 && (
+              <div className="chat-log">
+                {log.map((turn, i) => (
+                  <div key={i} className={`chat-bubble ${turn.role} ${turn.urgent ? 'urgent' : ''}`}>
+                    {turn.urgent && <AlertTriangle size={14} />}
+                    <p>{turn.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {interviewStatus === 'escalated' && (
+              <div className="urgent-banner">
+                <AlertTriangle size={18} />
+                <p>This sounds urgent. Please seek immediate in-person medical care — don't wait for a kiosk queue.</p>
+              </div>
+            )}
+
+            {interviewStatus === 'summarized' && summary && (
+              <div className="summary-card">
+                <h3>Summary for the doctor</h3>
+                <dl>
+                  <div><dt>Chief complaint</dt><dd>{summary.chiefComplaint}</dd></div>
+                  <div><dt>Onset / duration</dt><dd>{summary.onsetDuration}</dd></div>
+                  <div><dt>Severity</dt><dd>{summary.severity}</dd></div>
+                  <div><dt>Associated symptoms</dt><dd>{summary.associatedSymptoms}</dd></div>
+                  <div><dt>Medical history</dt><dd>{summary.medicalHistory}</dd></div>
+                  <div><dt>Medications</dt><dd>{summary.medications}</dd></div>
+                  <div><dt>Red flags</dt><dd>{summary.redFlags}</dd></div>
+                </dl>
+                <Button onClick={saveSummary} disabled={saved}>
+                  {saved ? 'Saved to your records' : 'Save summary to my records'}
+                </Button>
+              </div>
+            )}
+
+            {!interviewEnded && (
+              <>
+                <button
+                  type="button"
+                  className={`mic-button ${isRecording ? 'is-listening' : ''}`}
+                  onClick={toggleRecording}
+                  disabled={isProcessing}
+                  aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+                >
+                  {isRecording ? <Square size={20} /> : <Mic size={22} />}
+                </button>
+                <div className="voice-transcript">
+                  {isProcessing ? (
+                    <p className="placeholder">Thinking…</p>
+                  ) : (
+                    <p className="placeholder">
+                      {isRecording
+                        ? 'Listening… tap again to stop.'
+                        : log.length === 0
+                          ? 'Tap the mic and start speaking.'
+                          : 'Tap the mic to answer.'}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {voiceError && <p className="error-text">{voiceError}</p>}
+
+            {interviewEnded && (
+              <Button onClick={startNewInterview}>Start a new conversation</Button>
             )}
           </div>
         )}
